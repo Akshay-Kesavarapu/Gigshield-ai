@@ -47,3 +47,4 @@ Through a mobile application, the system can track a worker’s real-time locati
 
 Since delivery partners are always moving between locations, a mobile interface offers a much more convenient and accessible experience compared to other platforms. It allows them to quickly check updates, notifications, and earnings directly from their phones while they work.
 
+A web dashboard will be provided for administrators to monitor policies, claims, and analytics.
