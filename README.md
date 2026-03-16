@@ -34,3 +34,16 @@ Rahul works as a delivery partner for Zomato in Chennai. His income depends enti
 On days when heavy rainfall hits the city, things become difficult. Fewer people place orders, roads get flooded, and travelling becomes unsafe. Because of this, Rahul is often unable to complete enough deliveries and ends up losing a large part of his daily earnings.
 
 GigShield AI helps solve this problem. By using real-time environmental data, the system can automatically detect when conditions like heavy rain disrupt delivery work. When such situations occur, GigShield AI compensates Rahul for the income he loses—without requiring him to file any manual insurance claim.
+
+## Platform Choice
+
+### Selected Platform
+
+Mobile Application for Delivery Workers.
+
+Delivery workers mostly rely on their smartphones while they are on the job, making mobile apps the most practical way to support them.
+
+Through a mobile application, the system can track a worker’s real-time location, which helps ensure transparency and reduces the chances of fraud. Workers can also receive push notifications that instantly inform them when their insurance coverage is active or when a payout has been triggered due to a disruption.
+
+Since delivery partners are always moving between locations, a mobile interface offers a much more convenient and accessible experience compared to other platforms. It allows them to quickly check updates, notifications, and earnings directly from their phones while they work.
+
