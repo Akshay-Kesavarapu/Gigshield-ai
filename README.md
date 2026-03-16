@@ -130,3 +130,46 @@ These APIs enable real-time monitoring and automated claim processing.
 | Geolocation API | Validate worker location |
 | Payment API | Simulate automated payouts |
 
+## System Workflow
+
+```
+Worker registers
+        │
+        ▼
+Select Insurance Plan
+        │
+        ▼
+AI Risk Assessment
+        │
+        ▼
+Coverage Activated
+        │
+        ▼
+Real-Time Environmental Monitoring
+        │
+        ▼
+Disruption Trigger Detected
+        │
+        ▼
+Fraud Detection Validation
+        │
+        ▼
+Automatic Claim Processing
+        │
+        ▼
+Payout Sent to Worker
+```
+
+## System Architecture
+
+
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React / React Native |
+| Backend | Python FastAPI |
+| Machine Learning | Scikit-learn, Pandas |
+| Database | PostgreSQL |
+| External Services | Weather API, Air Quality API, Geolocation API, Payment Sandbox API |
