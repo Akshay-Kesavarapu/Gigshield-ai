@@ -48,3 +48,15 @@ Through a mobile application, the system can track a worker’s real-time locati
 Since delivery partners are always moving between locations, a mobile interface offers a much more convenient and accessible experience compared to other platforms. It allows them to quickly check updates, notifications, and earnings directly from their phones while they work.
 
 A web dashboard will be provided for administrators to monitor policies, claims, and analytics.
+
+## Disruptions Covered
+
+Our platform focuses on environmental disruptions that significantly impact delivery workers.
+
+These disruptions are monitored using real-time environmental APIs.
+
+| Disruption | Trigger Condition | Reason |
+| Heavy Rain | Rainfall > 50 mm | Major delivery slowdown |
+| Extreme Heat | Temperature > 42°C | Unsafe working conditions |
+| Severe Pollution | AQI > 300 | Health risk for outdoor workers|
+
