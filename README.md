@@ -61,3 +61,10 @@ These disruptions are monitored using real-time environmental APIs.
 | Extreme Heat | Temperature > 42°C | Unsafe working conditions |
 | Severe Pollution | AQI > 300 | Health risk for outdoor workers|
 
+## Parametric Insurance Model
+
+GigShield AI follows a parametric insurance model, where compensation is automatically provided when certain environmental conditions cross predefined limits.
+
+This removes the need for manual claim processing.
+
+For example, if factors like heavy rainfall, extreme heat, or severe air pollution exceed the set thresholds, the system detects it immediately and triggers the payout. This means workers receive support quickly, without having to submit claims or go through lengthy approval processes.
