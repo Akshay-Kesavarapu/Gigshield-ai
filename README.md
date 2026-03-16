@@ -173,3 +173,36 @@ Payout Sent to Worker
 | Machine Learning | Scikit-learn, Pandas |
 | Database | PostgreSQL |
 | External Services | Weather API, Air Quality API, Geolocation API, Payment Sandbox API |
+
+## Development Roadmap
+
+### Phase 1 — Ideation & Planning
+
+Define disruption triggers
+
+Design architecture
+
+Plan AI models
+
+Create GitHub repository and idea document
+
+### Phase 2 — Core Platform Development
+
+Worker registration
+
+Policy management
+
+Premium calculation
+
+Claim trigger system
+
+### Phase 3 — System Optimization
+
+Advanced fraud detection
+
+Automated payout system
+
+Analytics dashboard
+
+Final product demo
+
