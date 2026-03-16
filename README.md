@@ -56,6 +56,7 @@ Our platform focuses on environmental disruptions that significantly impact deli
 These disruptions are monitored using real-time environmental APIs.
 
 | Disruption | Trigger Condition | Reason |
+|------------|-------------------|--------|
 | Heavy Rain | Rainfall > 50 mm | Major delivery slowdown |
 | Extreme Heat | Temperature > 42°C | Unsafe working conditions |
 | Severe Pollution | AQI > 300 | Health risk for outdoor workers|
