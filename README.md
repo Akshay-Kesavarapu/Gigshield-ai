@@ -87,3 +87,46 @@ Example Plans
 | Standard | ₹40 | Rain + Heat |
 | Pro | ₹60 | Rain + Heat + Pollution |
 
+## AI Integration
+
+GigShield AI integrates machine learning models for risk prediction and fraud detection.
+
+### Risk Prediction Model
+
+This model estimates environmental risk for specific locations.
+
+#### Inputs:
+weather forecast data
+historical rainfall patterns
+pollution trends
+
+#### Output:
+A risk score used to adjust premium pricing.
+
+### Fraud Detection Model
+
+This model identifies suspicious claims.
+
+#### Fraud detection checks include:
+verifying worker location.
+confirming disruption events from APIs.
+detecting duplicate claims.
+
+Example rule:
+
+IF worker location ≠ disruption location
+THEN claim flagged for fraud
+
+## API Integrations
+
+External APIs provide real-world data for the platform.
+
+These APIs enable real-time monitoring and automated claim processing.
+
+| API | Purpose |
+|-----|---------|
+| Weather API | Detect rainfall and temperature |
+| Air Quality API | Monitor pollution levels |
+| Geolocation API | Validate worker location |
+| Payment API | Simulate automated payouts |
+
