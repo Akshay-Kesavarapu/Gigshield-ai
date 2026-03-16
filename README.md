@@ -68,3 +68,22 @@ GigShield AI follows a parametric insurance model, where compensation is automat
 This removes the need for manual claim processing.
 
 For example, if factors like heavy rainfall, extreme heat, or severe air pollution exceed the set thresholds, the system detects it immediately and triggers the payout. This means workers receive support quickly, without having to submit claims or go through lengthy approval processes.
+
+## Weekly Premium Model
+
+Our platform follows a weekly subscription model for insurance coverage.
+
+Premiums may be dynamically adjusted using AI-based risk assessment.
+
+Gig workers typically receive earnings on a weekly cycle.
+Weekly pricing reduces financial burden.
+It aligns insurance coverage with workers’ income flow.
+
+Example Plans
+
+| Plan | Weekly Premium | Coverage |
+|------|----------------|----------|
+| Basic | ₹25 | Rain |
+| Standard | ₹40 | Rain + Heat |
+| Pro | ₹60 | Rain + Heat + Pollution |
+
