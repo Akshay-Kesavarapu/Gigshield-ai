@@ -26,3 +26,11 @@ Food delivery riders are highly affected by weather conditions and environmental
 | Work Environment | Outdoor urban deliveries | 
 | Income Model | Outdoor urban deliveries |
 | Per delivery | Weekly |
+
+## Persona Scenario
+
+Rahul works as a delivery partner for Zomato in Chennai. His income depends entirely on the number of deliveries he completes each day.
+
+On days when heavy rainfall hits the city, things become difficult. Fewer people place orders, roads get flooded, and travelling becomes unsafe. Because of this, Rahul is often unable to complete enough deliveries and ends up losing a large part of his daily earnings.
+
+GigShield AI helps solve this problem. By using real-time environmental data, the system can automatically detect when conditions like heavy rain disrupt delivery work. When such situations occur, GigShield AI compensates Rahul for the income he loses—without requiring him to file any manual insurance claim.
