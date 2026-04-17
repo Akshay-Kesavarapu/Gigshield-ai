@@ -6,12 +6,16 @@ import Disruption from "./pages/Disruption";
 import Payout from "./pages/Payout";
 import Profile from "./pages/Profile";
 import Wallet from "./pages/Wallet";
+import WalletSetup from "./pages/WalletSetup";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProfile from "./pages/AdminProfile";
+import AdminRiskReports from "./pages/AdminRiskReports";
 import { useAuth } from "./hooks/useAuth";
 import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "./lib/supabase";
 import { useEffect, useState } from "react";
+import ErrorBoundary from "./components/ErrorBoundary";
+import NotFound from "./pages/NotFound";
 
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
@@ -106,8 +110,11 @@ function AnimatedRoutes() {
         <Route path="/payout" element={<ProtectedRoute><PageWrapper><Payout /></PageWrapper></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><PageWrapper><Wallet /></PageWrapper></ProtectedRoute>} />
+        <Route path="/wallet-setup" element={<ProtectedRoute><PageWrapper><WalletSetup /></PageWrapper></ProtectedRoute>} />
         <Route path="/admin/dashboard" element={<AdminRoute><PageWrapper><AdminDashboard /></PageWrapper></AdminRoute>} />
         <Route path="/admin/profile" element={<AdminRoute><PageWrapper><AdminProfile /></PageWrapper></AdminRoute>} />
+        <Route path="/admin/risk-reports" element={<AdminRoute><PageWrapper><AdminRiskReports /></PageWrapper></AdminRoute>} />
+        <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
     </AnimatePresence>
   );
@@ -120,7 +127,9 @@ function AnimatedRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AnimatedRoutes />
+      <ErrorBoundary>
+        <AnimatedRoutes />
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

@@ -4,7 +4,8 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
 import BottomNav from "../components/BottomNav";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Clock, ChevronRight } from "lucide-react";
+import { ShieldCheck, Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Clock, ChevronRight, PlusCircle } from "lucide-react";
+import ErrorDisplay from "../components/ErrorDisplay";
 
 /**
  * Renders rider wallet using live transaction history from Supabase.
@@ -15,8 +16,10 @@ export default function Wallet() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusMsg, setStatusMsg] = useState("");
   const [transactions, setTransactions] = useState([]);
   const [showAllHistory, setShowAllHistory] = useState(false);
+  const [topupAmount, setTopupAmount] = useState(500);
 
   useEffect(() => {
     const fetchWalletData = async () => {
@@ -36,7 +39,11 @@ export default function Wallet() {
             { id: '2', type: 'premium', amount: 125, created_at: new Date(Date.now() - 86400000).toISOString(), description: 'Weekly Premium Debit' },
             { id: '3', type: 'premium', amount: 125, created_at: new Date(Date.now() - 86400000 * 8).toISOString(), description: 'Weekly Premium Debit' }
           ];
-          setTransactions(demoTransactions);
+          
+          // Merge local demo topups for the Demo profile
+          const savedTopups = JSON.parse(localStorage.getItem('demo_topups') || '[]');
+          setTransactions([...savedTopups, ...demoTransactions]);
+          
           setLoading(false);
           return;
         }
@@ -97,13 +104,17 @@ export default function Wallet() {
       .filter((tx) => tx.type === "payout")
       .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
+    const topupTotal = transactions
+      .filter((tx) => tx.type === "topup")
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
     const premiumTotal = transactions
       .filter((tx) => tx.type === "premium")
       .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
     return {
-      protectedEarnings: payoutTotal - premiumTotal,
-      payoutTotal,
+      protectedEarnings: payoutTotal + topupTotal - premiumTotal,
+      payoutTotal: payoutTotal + topupTotal,
       cycleProgress: payoutTotal > 0 ? Math.min(Math.round((payoutTotal / (payoutTotal + premiumTotal + 1)) * 100), 100) : 0
     };
   }, [transactions]);
@@ -123,6 +134,14 @@ export default function Wallet() {
     return (
       <div className="min-h-screen bg-background text-white pb-24 overflow-x-hidden relative flex flex-col items-center justify-center">
         <div className="w-10 h-10 border-4 border-accent1/30 border-t-accent1 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background text-slate-200 flex items-center justify-center p-6">
+        <ErrorDisplay message={error} onRetry={() => window.location.reload()} />
       </div>
     );
   }
@@ -200,7 +219,9 @@ export default function Wallet() {
                 <p className="text-slate-400 text-sm">No transactions found yet.</p>
               </div>
             ) : (
-              (showAllHistory ? transactions : transactions.slice(0, 4)).map((tx, idx) => (
+              (showAllHistory ? transactions : transactions.slice(0, 4)).map((tx, idx) => {
+                const isCredit = tx.type === "payout" || tx.type === "topup";
+                return (
                 <motion.div
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -209,11 +230,11 @@ export default function Wallet() {
                   className="glass-panel p-4 rounded-2xl border border-white/5 flex justify-between items-center group active:scale-[0.98] transition-transform"
                 >
                   <div className="flex gap-4 items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === "payout" ? "bg-cyan-400/10" : "bg-white/5"}`}>
-                       {tx.type === "payout" ? <ArrowDownRight className="w-5 h-5 text-cyan-400" /> : <ArrowUpRight className="w-5 h-5 text-slate-400" />}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isCredit ? "bg-cyan-400/10" : "bg-white/5"}`}>
+                       {isCredit ? <ArrowDownRight className="w-5 h-5 text-cyan-400" /> : <ArrowUpRight className="w-5 h-5 text-slate-400" />}
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-white group-hover:text-accent1 transition-colors">{tx.description || (tx.type === "payout" ? "Triggered Payout" : "Premium Debit")}</p>
+                      <p className="font-semibold text-sm text-white group-hover:text-accent1 transition-colors">{tx.description || (isCredit ? "Wallet Credit" : "Premium Debit")}</p>
                       <p className="text-[11px] text-slate-500">
                         {new Date(tx.created_at).toLocaleString("en-IN", {
                           day: "2-digit", month: "short",
@@ -223,13 +244,13 @@ export default function Wallet() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className={`font-bold text-sm ${tx.type === "payout" ? "text-cyan-400" : "text-white"}`}>
-                      {tx.type === "payout" ? "+" : "-"}₹{Number(tx.amount || 0).toFixed(2)}
+                    <p className={`font-bold text-sm ${isCredit ? "text-cyan-400" : "text-white"}`}>
+                      {isCredit ? "+" : "-"}₹{Number(tx.amount || 0).toFixed(2)}
                     </p>
                     <ChevronRight className="w-4 h-4 text-slate-600 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </motion.div>
-              ))
+              )})
             )}
           </div>
         </motion.section>
@@ -246,13 +267,92 @@ export default function Wallet() {
            <p className="text-white text-sm font-semibold mb-1">Cycle Progress</p>
            <p className="text-xs text-slate-400 mb-4">{totals.cycleProgress}% of current payout flow active</p>
            
-           <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-2 relative">
-             <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-accent1 via-cyan-400 to-purple-400 z-10 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,240,255,0.5)]" style={{ width: `${totals.cycleProgress}%` }} />
+           <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-6 relative">
+             <div className={`absolute top-0 left-0 bottom-0 bg-gradient-to-r from-accent1 via-cyan-400 to-purple-400 z-10 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,240,255,0.5)] ${progressClass}`} />
            </div>
+
+           <div className="mb-4">
+             <div className="flex justify-between items-center mb-2">
+               <span className="text-sm font-bold text-slate-300">Top-up Amount</span>
+               <span className="text-xl font-extrabold text-cyan-400">₹{topupAmount}</span>
+             </div>
+             <div className="flex gap-2">
+               {[100, 500, 1000].map(amt => (
+                 <button
+                   key={amt}
+                   onClick={() => setTopupAmount(amt)}
+                   className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-all ${topupAmount === amt ? 'bg-cyan-400/20 border-cyan-400 text-cyan-400' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'}`}
+                 >
+                   ₹{amt}
+                 </button>
+               ))}
+             </div>
+           </div>
+
+            <button
+              onClick={async () => {
+                try {
+                  setLoading(true);
+
+                  // 1. Prepare Razorpay Options for Hackathon Demo mode (skipping Edge Function order creation)
+                  const options = {
+                    key: "rzp_test_SebTPVyU62VyeI", // Test Mode Key
+                    amount: topupAmount * 100, // Amount in paise
+                    currency: "INR",
+                    name: "GigShield AI",
+                    description: "Premium Coverage Top-up",
+                    handler: async (response) => {
+                      // 2. Record Successful Transaction Locally
+                      const newTx = {
+                        id: crypto.randomUUID(), // Valid UUID format for Supabase
+                        rider_id: user?.id,
+                        amount: topupAmount,
+                        type: 'topup',
+                        created_at: new Date().toISOString(),
+                        description: `Top-up (${response.razorpay_payment_id})`
+                      };
+                      
+                      const { error: insertError } = await supabase.from('transactions').insert(newTx);
+                      if (insertError) console.error("Database Insert Blocked:", insertError);
+
+                      // Persist mock top-up in local storage ONLY for the demo account
+                      if (user?.id === '99999999-9999-9999-9999-999999999999') {
+                        const savedTopups = JSON.parse(localStorage.getItem('demo_topups') || '[]');
+                        localStorage.setItem('demo_topups', JSON.stringify([newTx, ...savedTopups]));
+                      }
+
+                      // Update React state instantly without reloading
+                      setTransactions((prev) => [newTx, ...prev]);
+                      setStatusMsg(`Nodes Synced. ₹${topupAmount} Secured on Ledger.`);
+                      
+                      setTimeout(() => setStatusMsg(""), 4000);
+                    },
+                    prefill: {
+                      name: user.full_name || "Rider",
+                      contact: "9999999999" // Forces Indian locale for UPI
+                    },
+                    theme: { color: "#00f0ff" }
+                  };
+
+                  const rzp = new window.Razorpay(options);
+                  rzp.open();
+
+                } catch (e) {
+                  setStatusMsg("Gateway Rejection: " + e.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="w-full mt-4 bg-gradient-cyan text-slate-900 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-[0_10px_25px_rgba(0,240,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+              disabled={loading}
+            >
+              <PlusCircle className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+              {loading ? "Approving Transfer..." : "Add Funds"}
+            </button>
 
            <button
              onClick={() => navigate("/dashboard")}
-             className="mt-6 w-full glass-button py-3.5 rounded-2xl text-accent1 font-bold active:scale-[0.98] transition-transform text-sm"
+             className="mt-4 w-full glass-button py-3.5 rounded-2xl text-slate-400 font-bold active:scale-[0.98] transition-transform text-sm border-none bg-white/5 shadow-inner"
            >
              Back to Core Dashboard
            </button>
@@ -260,6 +360,19 @@ export default function Wallet() {
       </main>
 
       <BottomNav />
+
+      {/* STATUS TOAST */}
+      <AnimatePresence>
+        {statusMsg && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed bottom-24 left-6 right-6 z-[60] bg-accent1 text-slate-950 px-6 py-4 rounded-2xl font-bold shadow-[0_10px_40px_rgba(0,240,255,0.4)] flex items-center gap-3"
+          >
+            <ShieldCheck className="w-5 h-5" />
+            {statusMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

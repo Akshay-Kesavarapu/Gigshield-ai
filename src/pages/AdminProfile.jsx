@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { ShieldCheck, Bell, UserCircle, Key, Globe, Settings, Map, SlidersHorizontal, RefreshCcw, LayoutDashboard, Activity } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldCheck, Bell, UserCircle, Key, Globe, Settings, Map, SlidersHorizontal, RefreshCcw, LayoutDashboard, Activity, X, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabase";
@@ -12,6 +12,9 @@ export default function AdminProfile() {
   const [rainfallBuffer, setRainfallBuffer] = useState(12.5);
   const [aqiThrottle, setAqiThrottle] = useState(150);
   const [loading, setLoading] = useState(true);
+  const [statusMsg, setStatusMsg] = useState("");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [logs, setLogs] = useState([]);
   const [adminName, setAdminName] = useState("");
   const [adminRole, setAdminRole] = useState("");
   const [adminClearance, setAdminClearance] = useState("");
@@ -66,20 +69,23 @@ export default function AdminProfile() {
     try {
       await supabase.from('system_settings').upsert({ id: 1, rainfall_buffer: rainfallBuffer, aqi_throttle: aqiThrottle });
       await supabase.from('app_logs').insert([{ action: 'admin_push_consensus', user_id: user?.id }]);
-      alert("Parametric parameters securely pushed to live system nodes.");
+      setStatusMsg("Parametric parameters securely pushed to live nodes.");
+      setTimeout(() => setStatusMsg(""), 3000);
     } catch (err) {
       console.error(err);
     }
   };
   
-  const handleBellClick = () => {
-    supabase.from('app_logs').insert([{ action: 'admin_bell_click', user_id: user?.id }]).then();
-    alert("Alert module tracking log recorded.");
+  const handleBellClick = async () => {
+    setNotificationsOpen(true);
+    try {
+      const { data } = await supabase.from('app_logs').select('*').order('created_at', { ascending: false }).limit(10);
+      setLogs(data || []);
+    } catch (e) {}
   };
 
   const handleRiskReports = () => {
-    supabase.from('app_logs').insert([{ action: 'risk_reports_click', user_id: user?.id }]).then();
-    alert("Risk Reports requested.");
+    navigate("/admin/risk-reports");
   };
 
   return (
@@ -101,7 +107,7 @@ export default function AdminProfile() {
              <LayoutDashboard className="w-5 h-5" />
              Dashboard
           </button>
-          <button onClick={handleRiskReports} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+          <button onClick={() => navigate("/admin/risk-reports")} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
              <Activity className="w-5 h-5" />
              Risk Reports
           </button>
@@ -256,6 +262,19 @@ export default function AdminProfile() {
           </div>
         </main>
       </div>
+      
+      {/* STATUS TOAST */}
+      <AnimatePresence>
+        {statusMsg && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed bottom-10 right-10 z-[60] bg-accent1 text-slate-950 px-6 py-4 rounded-2xl font-bold shadow-[0_10px_40px_rgba(0,240,255,0.4)] flex items-center gap-3"
+          >
+            <ShieldCheck className="w-5 h-5" />
+            {statusMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

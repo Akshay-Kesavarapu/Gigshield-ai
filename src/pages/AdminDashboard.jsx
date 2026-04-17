@@ -3,8 +3,16 @@ import { supabase } from "../lib/supabase";
 import { fetchLiveWeather } from "../Services/weatherService";
 import { useAuth } from "../hooks/useAuth";
 import { motion } from "framer-motion";
-import { ShieldCheck, LayoutDashboard, Users, Activity, Settings, Bell, CircleDot, IndianRupee, MapPin } from "lucide-react";
+import { 
+  ShieldCheck, LayoutDashboard, Users, Activity, Settings, 
+  Bell, CircleDot, IndianRupee, MapPin, X, Info 
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { 
+  calculateRiskScore,
+  defaultWeights
+} from "../Services/riskEngine";
 
 /**
  * Renders admin analytics with live Supabase-backed metrics and zone risk status.
@@ -14,14 +22,25 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const handleBellClick = () => {
-    supabase.from('app_logs').insert([{ action: 'admin_bell_click', user_id: user?.id }]).then();
-    alert("Alert module tracking log recorded.");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [logs, setLogs] = useState([]);
+
+  const handleBellClick = async () => {
+    setNotificationsOpen(true);
+    try {
+      const { data } = await supabase
+        .from('app_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      setLogs(data || []);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleRiskReports = () => {
-    supabase.from('app_logs').insert([{ action: 'risk_reports_click', user_id: user?.id }]).then();
-    alert("Risk Reports mapping sequence requested.");
+    navigate("/admin/risk-reports");
   };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,12 +55,14 @@ export default function AdminDashboard() {
       setError("");
 
       try {
+        const { data: settings } = await supabase.from('system_settings').select('*').limit(1).maybeSingle();
+
         if (user?.id === '77777777-7777-7777-7777-777777777777') {
           setActiveUsers(11248);
           setPremiumRevenue(2450000);
           setLossRatio(42.5);
           setZoneRisks([
-            { id: '1', cityName: 'Chennai', zoneName: 'Metro Center', riskScore: 88, threshold: 80, severity: 'Critical' },
+            { id: '1', cityName: 'Chennai', zoneName: 'Metro Center', riskScore: calculateRiskScore({ aqi: 100/20, rainfall: 50/10, humidity: 80 }, defaultWeights, settings), threshold: 80, severity: 'Critical' },
             { id: '2', cityName: 'Chennai', zoneName: 'Coastal Belt', riskScore: 78, threshold: 85, severity: 'Elevated' },
             { id: '3', cityName: 'Chennai', zoneName: 'IT Corridor', riskScore: 45, threshold: 80, severity: 'Stable' }
           ]);
@@ -96,11 +117,7 @@ export default function AdminDashboard() {
           (zones || []).map(async (zone) => {
             try {
               const weather = await fetchLiveWeather(zone.latitude, zone.longitude);
-              const scaledAqi = weather.aqi * 20;
-              const scaledRain = weather.rainfall * 10;
-              const floodRisk = scaledRain > 50 ? 85 : 40;
-              const trafficRisk = weather.humidity > 80 ? 70 : 40;
-              const riskScore = 0.4 * scaledAqi + 0.35 * scaledRain + 0.15 * floodRisk + 0.1 * trafficRisk;
+              const riskScore = calculateRiskScore(weather, zone.weights || {}, settings);
 
               return {
                 id: zone.id,
@@ -144,6 +161,53 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-white overflow-hidden flex">
+      <AnimatePresence>
+        {notificationsOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setNotificationsOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            />
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-surface/90 border-l border-white/10 backdrop-blur-2xl z-[70] p-8 shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-xl font-bold">System Logs</h3>
+                <button onClick={() => setNotificationsOpen(false)} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-140px)] pr-2">
+                {logs.length === 0 ? (
+                  <p className="text-slate-500 text-center py-10 italic">No recent system events.</p>
+                ) : (
+                  logs.map((log) => (
+                    <div key={log.id} className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-accent1/10 flex items-center justify-center shrink-0">
+                          <Info className="w-4 h-4 text-accent1" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{log.action.replace(/_/g, ' ')}</p>
+                          <p className="text-[10px] text-slate-500 font-medium">#{log.user_id?.slice(0, 8)} • {new Date(log.created_at).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       {/* Sidebar Command Center */}
       <aside className="hidden md:flex inset-y-0 left-0 w-72 glass-panel-heavy border-r border-white/5 flex-col z-50">
         <div className="p-8 pb-4">
@@ -161,7 +225,7 @@ export default function AdminDashboard() {
             <LayoutDashboard className="w-5 h-5" />
             Dashboard
           </button>
-          <button onClick={handleRiskReports} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-not-allowed opacity-50">
+          <button onClick={handleRiskReports} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
             <Activity className="w-5 h-5" />
             Risk Reports
           </button>
@@ -298,6 +362,75 @@ export default function AdminDashboard() {
           </motion.section>
         </main>
       </div>
+
+      {/* ADMIN AUDIT OVERLAY: Total System Cohesion Fix */}
+      <AnimatePresence>
+        {notificationsOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-end bg-slate-950/40 backdrop-blur-sm"
+            onClick={() => setNotificationsOpen(false)}
+          >
+            <motion.div 
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="w-full max-w-md h-full glass-panel-heavy border-l border-white/5 flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold tracking-tight">System Audit Log</h3>
+                  <p className="text-xs text-slate-500 font-medium">Real-time node interaction ledger</p>
+                </div>
+                <button 
+                  onClick={() => setNotificationsOpen(false)}
+                  className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {logs.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
+                    <Activity className="w-12 h-12 mb-4" />
+                    <p className="font-bold uppercase tracking-widest text-[10px]">No recent node events</p>
+                  </div>
+                ) : (
+                  logs.map((log, idx) => (
+                    <motion.div 
+                      key={log.id}
+                      initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
+                      className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2 group"
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="px-2 py-0.5 rounded bg-accent1/10 text-accent1 text-[9px] font-bold uppercase tracking-widest">
+                          {log.action?.replace('_', ' ')}
+                        </span>
+                        <span className="text-[9px] text-slate-600 font-mono">
+                          {new Date(log.created_at).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-300 font-medium">
+                        Node interaction detected from UID: <span className="text-slate-500">{log.user_id?.slice(0,8)}...</span>
+                      </p>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-8 border-t border-white/5">
+                <button 
+                  onClick={() => navigate("/admin/risk-reports")}
+                  className="w-full py-4 glass-button rounded-2xl font-bold text-sm tracking-tight flex items-center justify-center gap-3"
+                >
+                  Full Historical Report <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

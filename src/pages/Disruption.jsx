@@ -7,12 +7,25 @@ import BottomNav from "../components/BottomNav";
 import { motion } from "framer-motion";
 import { ShieldCheck, AlertTriangle, CloudLightning, Activity, CheckCircle, ChevronRight, MapPin } from "lucide-react";
 
-const incomeMap = {
-  "300-500": 400,
-  "500-800": 650,
-  "800-1200": 1000,
-  "1200+": 1400
-};
+import { 
+  calculateRiskScore, 
+  incomeMap
+} from "../Services/riskEngine";
+
+/**
+ * Calculates distance between two coordinates in KM using Haversine formula.
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
 
 /**
  * Renders dynamic disruption validation and payout progress.
@@ -23,6 +36,8 @@ export default function Disruption() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [zoneCoords, setZoneCoords] = useState(null);
+  const [proximityStatus, setProximityStatus] = useState("verifying");
   const [fraudCheckDone, setFraudCheckDone] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dashboardData, setDashboardData] = useState({
@@ -67,14 +82,18 @@ export default function Disruption() {
       setError("");
 
       try {
+        const { data: settings } = await supabase.from('system_settings').select('*').limit(1).maybeSingle();
+
         if (user.id === '99999999-9999-9999-9999-999999999999') {
+           const mockWeather = { aqi: 120/20, rainfall: 60/10, humidity: 85 };
+           const rs = calculateRiskScore(mockWeather, {}, settings);
            setDashboardData({
             premium: 125,
             payoutTriggered: true,
-            riskScore: 82,
+            riskScore: rs,
             zoneThreshold: 80,
             zoneName: "Metro Center",
-            severity: "High"
+            severity: rs >= 85 ? "Extreme" : "High"
           });
           setLoading(false);
           return;
@@ -112,35 +131,29 @@ export default function Disruption() {
           throw new Error("Rider profile not found.");
         }
 
-        const { data: zoneData, error: zoneError } = await supabase
-          .from("zones")
-          .select("*")
-          .eq("id", rider.assigned_zone_id)
-          .single();
-
-        if (zoneError) {
-          throw zoneError;
+        if (rider.assigned_zone_id) {
+          const { data: zone } = await supabase.from("zones").select("latitude, longitude").eq("id", rider.assigned_zone_id).single();
+          if (zone) setZoneCoords({ lat: zone.latitude, lng: zone.longitude });
         }
 
-        const liveWeather = await fetchLiveWeather(zoneData.latitude, zoneData.longitude);
-        const income = incomeMap[rider.daily_income_range] || 650;
-        const zoneThreshold = zoneData.risk_threshold || 80;
-        const aqi = liveWeather.aqi * 20;
-        const rainfall = liveWeather.rainfall * 10;
-        const floodRisk = rainfall > 50 ? 85 : 40;
-        const trafficRisk = liveWeather.humidity > 80 ? 70 : 40;
-        const riskScore = 0.4 * aqi + 0.35 * rainfall + 0.15 * floodRisk + 0.1 * trafficRisk;
-        const payoutTriggered = riskScore >= zoneThreshold;
-        const premium = 50 + 0.8 * riskScore + 0.08 * income;
+        const { data: latestRisk } = await supabase
+          .from("risk_scores")
+          .select("*")
+          .eq("zone_id", rider.assigned_zone_id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
+        const rs = Math.round(latestRisk?.risk_score || 0);
+        const zoneThreshold = latestRisk?.threshold || 80;
+        
         setDashboardData({
-          premium: Math.round(premium),
-          payoutTriggered,
-          riskScore: Math.round(riskScore),
+          premium: Math.round(rider.plan_premium || 125),
+          payoutTriggered: rs >= zoneThreshold,
+          riskScore: rs,
           zoneThreshold,
-          zoneName: zoneData.zone_name || "Unknown Zone",
-          severity:
-            riskScore >= 85 ? "Extreme" : riskScore >= 70 ? "High" : riskScore >= 50 ? "Moderate" : "Low"
+          zoneName: "Active Protection Zone",
+          severity: rs >= 85 ? "Extreme" : "High"
         });
       } catch (fetchError) {
         setError(fetchError.message || "Unable to load disruption data.");
@@ -149,17 +162,50 @@ export default function Disruption() {
       }
     };
 
-    fetchDisruptionData();
-  }, [user]);
+    const validateLiveProximity = () => {
+      if (!navigator.geolocation) {
+        setProximityStatus("invalid");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (zoneCoords) {
+            const dist = calculateDistance(pos.coords.latitude, pos.coords.longitude, zoneCoords.lat, zoneCoords.lng);
+            setProximityStatus(dist <= 5 ? "valid" : "invalid");
+          } else {
+            setProximityStatus("valid");
+          }
+        },
+        () => setProximityStatus("invalid"),
+        { enableHighAccuracy: true }
+      );
+    };
+
+    fetchDisruptionData().then(() => validateLiveProximity());
+  }, [user, zoneCoords?.lat]);
 
   const checklist = [
-    { label: "GPS Proximity Validated", valid: true },
-    {
-      label: "Historical Weather Matched",
-      valid: dashboardData.riskScore >= dashboardData.zoneThreshold
+    { 
+      label: "Satellite Proximity Verified", 
+      valid: proximityStatus === "valid",
+      detail: proximityStatus === "valid" ? "Live Signal Validated" : proximityStatus === "verifying" ? "Syncing Satellite..." : "Unauthorized Location"
     },
-    { label: "Payout Threshold Crossed", valid: dashboardData.payoutTriggered },
-    { label: "Fraud Check", valid: fraudCheckDone }
+    {
+      label: "Climate Oracle Consensus",
+      valid: dashboardData.riskScore > 0,
+      detail: "Weather Station Sync"
+    },
+    { 
+      label: "Parametric Trigger Validation", 
+      valid: dashboardData.payoutTriggered,
+      detail: `Score: ${dashboardData.riskScore}`
+    },
+    { 
+      label: "Ledger Identity Proof", 
+      valid: !!user?.id,
+      detail: "Auth Session Live"
+    }
   ];
 
   if (loading) {

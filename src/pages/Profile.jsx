@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
 import BottomNav from "../components/BottomNav";
 import { motion } from "framer-motion";
-import { ShieldCheck, UserCircle, LogOut, ChevronRight, MapPin, Phone, CreditCard, Shield } from "lucide-react";
+import { ShieldCheck, UserCircle, LogOut, ChevronRight, MapPin, Phone, CreditCard, Shield, Edit3, Check, X } from "lucide-react";
 
 /**
  * Renders rider profile with live data from Supabase.
@@ -24,6 +24,30 @@ export default function Profile() {
     protectedEarnings: 0,
     coverageEnds: "-"
   });
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempUpi, setTempUpi] = useState("");
+
+  const handleUpdateUpi = async () => {
+    if (!tempUpi.includes("@")) {
+      setError("Please enter a valid handle (e.g. name@bank)");
+      return;
+    }
+
+    try {
+      if (user.id !== '99999999-9999-9999-9999-999999999999') {
+        const { error: updateError } = await supabase
+          .from("riders")
+          .update({ upi_id: tempUpi })
+          .eq("id", user.id);
+        if (updateError) throw updateError;
+      }
+      
+      setRiderProfile(prev => ({ ...prev, upiId: tempUpi }));
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -204,13 +228,34 @@ export default function Profile() {
             </div>
 
             <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-1">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400">
                   <CreditCard className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-xs text-slate-500 font-medium">UPI Payout Route</p>
-                  <p className="text-sm font-bold text-white">{riderProfile.upiId}</p>
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input 
+                        value={tempUpi}
+                        onChange={(e) => setTempUpi(e.target.value)}
+                        className="bg-white/5 border border-accent1/30 rounded-lg px-2 py-1 text-sm text-white focus:outline-none w-full"
+                        autoFocus
+                      />
+                      <button onClick={handleUpdateUpi} className="p-2 rounded-lg bg-accent1/10 text-accent1"><Check className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setIsEditing(false)} className="p-2 rounded-lg bg-red-500/10 text-red-400"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p className="text-sm font-bold text-white">{riderProfile.upiId}</p>
+                      <button 
+                        onClick={() => { setTempUpi(riderProfile.upiId); setIsEditing(true); }}
+                        className="p-1.5 rounded-md hover:bg-white/5 text-slate-500"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
